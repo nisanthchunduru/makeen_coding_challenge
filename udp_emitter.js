@@ -115,7 +115,7 @@ function emitPacket(sockets, transactionId, packetPayload, offset, isLast, callb
 
 // Emit buffer payload randomly via UDP socket
 //
-function emitRandom(sockets, transactionId, payload, randomObject, callback) {
+function sendMessage(sockets, transactionId, payload, randomObject, callback) {
     var count = 0;
     var sequence = randomObject.sequence;
     var maxOffset = randomObject.maxOffset;
@@ -153,7 +153,7 @@ function generateAndSendMessage(sockets, transactionId, callback) {
     var hash = crypto.createHash("sha256").update(payload);
     var randomObject = generateRandomSequence(payload.length, PACKET_MAX_PAYLOAD_SIZE);
 
-    emitRandom(sockets, transactionId, payload, randomObject, function (err, count) {
+    sendMessage(sockets, transactionId, payload, randomObject, function (err, count) {
         console.log("Emitted message #" + transactionId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
         callback(err);
     });
