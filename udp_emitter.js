@@ -146,13 +146,13 @@ function emitRandom(sockets, transactionId, payload, randomObject, callback) {
 //
 function emitPayload(sockets, transactionId, callback) {
     // create random data payload between 1 byte and MAX_PAYLOAD_SIZE inclusive
-    var dataSize = Math.floor((Math.random() * MAX_PAYLOAD_SIZE) + 1);
-    var payload = crypto.randomBytes(dataSize);
+    var payloadSize = Math.floor((Math.random() * MAX_PAYLOAD_SIZE) + 1);
+    var payload = crypto.randomBytes(payloadSize);
     var hash = crypto.createHash("sha256").update(payload);
     var randomObject = generateRandomSequence(payload.length, PACKET_MAX_DATA_SIZE);
 
     emitRandom(sockets, transactionId, payload, randomObject, function (err, count) {
-        console.log("Emitted message #" + transactionId + " of size:" + dataSize + " packets:" + count + " sha256:" + hash.digest("hex"));
+        console.log("Emitted message #" + transactionId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
         callback(err);
     });
 }
