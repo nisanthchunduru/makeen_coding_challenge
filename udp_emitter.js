@@ -85,7 +85,7 @@ function generateRandomSequence(top, max) {
 // TransactionID uint32_t  BE
 // Data    N DataSize Bytes
 //
-function emitPacket(sockets, transactionId, packetPayload, offset, isLast, callback) {
+function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLast, callback) {
     assert(packetPayload.length <= PACKET_MAX_PAYLOAD_SIZE);
 
     // Determine packet size
@@ -126,7 +126,7 @@ function sendMessage(sockets, transactionId, payload, randomObject, callback) {
         var packetPayload = payload.slice(offset, length);
 
         var isLast = (offset === maxOffset);
-        emitPacket(sockets, transactionId, packetPayload, offset, isLast, function (err) {
+        sendMessageFragment(sockets, transactionId, packetPayload, offset, isLast, function (err) {
             if (err) {
                 console.log("Error emitting: " + err);
                 callback(err);
