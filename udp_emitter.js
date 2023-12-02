@@ -10,10 +10,10 @@ var assert = require("assert");
 var DESTINATION_PORT = 6789;
 var DESTINATION_HOST = "127.0.0.1";
 var NUM_SOURCE_SOCKETS = 16;
+var MESSAGE_MAX_PAYLOAD_SIZE = (1024 * 1024);
 var PACKET_MAX_SIZE = 512;
 var PACKET_HEADER_SIZE = 12;
-var PACKET_MAX_DATA_SIZE = (PACKET_MAX_SIZE - PACKET_HEADER_SIZE);
-var MAX_PAYLOAD_SIZE = (1024 * 1024);
+var PACKET_MAX_PAYLOAD_SIZE = (PACKET_MAX_SIZE - PACKET_HEADER_SIZE);
 
 Array.prototype.getRandomElement = function () {
     return this[Math.floor(Math.random() * this.length)];
@@ -85,11 +85,11 @@ function generateRandomSequence(top, max) {
 // TransactionID uint32_t  BE
 // Data    N DataSize Bytes
 //
-function emitPacket(sockets, transactionId, data, offset, isLast, callback) {
-    assert(data.length <= PACKET_MAX_DATA_SIZE);
+function emitPacket(sockets, transactionId, packetPayload, offset, isLast, callback) {
+    assert(packetPayload.length <= PACKET_MAX_PAYLOAD_SIZE);
 
     // Determine packet size
-    var packetSize = PACKET_HEADER_SIZE + data.length;
+    var packetSize = PACKET_HEADER_SIZE + packetPayload.length;
 
     // Create packet buffer
     var packetBuffer = Buffer.alloc(packetSize);
@@ -101,15 +101,16 @@ function emitPacket(sockets, transactionId, data, offset, isLast, callback) {
     }
 
     packetBuffer.writeUInt16BE(flags, 0);
-    packetBuffer.writeUInt16BE(data.length, 2);
+    packetBuffer.writeUInt16BE(packetPayload.length, 2);
     packetBuffer.writeUInt32BE(offset, 4);
     packetBuffer.writeUInt32BE(transactionId, 8);
 
     // Append the payload
-    data.copy(packetBuffer, PACKET_HEADER_SIZE);
+    packetPayload.copy(packetBuffer, PACKET_HEADER_SIZE);
 
     // Put the data on the wire, random socket.
-    sockets.getRandomElement().send(packetBuffer, 0, packetBuffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
+    randomSocket = sockets.getRandomElement()
+    randomSocket.send(packetBuffer, 0, packetBuffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
 }
 
 // Emit buffer payload randomly via UDP socket
@@ -121,10 +122,11 @@ function emitRandom(sockets, transactionId, payload, randomObject, callback) {
 
     function sendOne() {
         var node = sequence[count];
-        var data = payload.slice(node[0], node[1] + node[0]);
+        const [offset, length] = node
+        var packetPayload = payload.slice(offset, length);
 
-        var isLast = (node[0] === maxOffset);
-        emitPacket(sockets, transactionId, data, node[0], isLast, function (err) {
+        var isLast = (offset === maxOffset);
+        emitPacket(sockets, transactionId, packetPayload, offset, isLast, function (err) {
             if (err) {
                 console.log("Error emitting: " + err);
                 callback(err);
@@ -142,14 +144,14 @@ function emitRandom(sockets, transactionId, payload, randomObject, callback) {
     sendOne();
 }
 
-// Emit one payload from [1,MAX_PAYLOAD_SIZE] randomly
+// Emit one payload from [1,MESSAGE_MAX_PAYLOAD_SIZE] randomly
 //
 function emitPayload(sockets, transactionId, callback) {
-    // create random data payload between 1 byte and MAX_PAYLOAD_SIZE inclusive
-    var payloadSize = Math.floor((Math.random() * MAX_PAYLOAD_SIZE) + 1);
+    // create random data payload between 1 byte and MESSAGE_MAX_PAYLOAD_SIZE inclusive
+    var payloadSize = Math.floor((Math.random() * MESSAGE_MAX_PAYLOAD_SIZE) + 1);
     var payload = crypto.randomBytes(payloadSize);
     var hash = crypto.createHash("sha256").update(payload);
-    var randomObject = generateRandomSequence(payload.length, PACKET_MAX_DATA_SIZE);
+    var randomObject = generateRandomSequence(payload.length, PACKET_MAX_PAYLOAD_SIZE);
 
     emitRandom(sockets, transactionId, payload, randomObject, function (err, count) {
         console.log("Emitted message #" + transactionId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
@@ -193,8 +195,8 @@ function main() {
 
             count -= 1;
             if (count === 0) {
-                sockets.forEach(function (s) {
-                    s.close();
+                sockets.forEach(function (socket) {
+                    socket.close();
                 });
             } else {
                 emitOne();
