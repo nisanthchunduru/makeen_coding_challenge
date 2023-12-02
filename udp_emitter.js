@@ -185,7 +185,7 @@ function main() {
         sockets.push(socket);
     }
 
-    function emitOne() {
+    function emitRemainingMessages() {
         transactionId += 1;
         emitPayload(sockets, transactionId, function (err) {
             if (err) {
@@ -203,8 +203,7 @@ function main() {
             }
         });
     }
-
-    emitOne();
+    emitRemainingMessages();
 }
 
 // Entry point
