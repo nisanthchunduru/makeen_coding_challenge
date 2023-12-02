@@ -146,7 +146,7 @@ function emitRandom(sockets, transactionId, payload, randomObject, callback) {
 
 // Emit one payload from [1,MESSAGE_MAX_PAYLOAD_SIZE] randomly
 //
-function emitPayload(sockets, transactionId, callback) {
+function generateAndSendMessage(sockets, transactionId, callback) {
     // create random data payload between 1 byte and MESSAGE_MAX_PAYLOAD_SIZE inclusive
     var payloadSize = Math.floor((Math.random() * MESSAGE_MAX_PAYLOAD_SIZE) + 1);
     var payload = crypto.randomBytes(payloadSize);
@@ -185,9 +185,9 @@ function main() {
         sockets.push(socket);
     }
 
-    function emitRemainingMessages() {
+    function sendRemainingMessages() {
         transactionId += 1;
-        emitPayload(sockets, transactionId, function (err) {
+        generateAndSendMessage(sockets, transactionId, function (err) {
             if (err) {
                 console.log("Fail: " + err);
                 throw err;
@@ -203,7 +203,7 @@ function main() {
             }
         });
     }
-    emitRemainingMessages();
+    sendRemainingMessages();
 }
 
 // Entry point
