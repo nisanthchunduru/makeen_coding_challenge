@@ -85,7 +85,7 @@ function fragmentMessage(top, max) {
 // TransactionID uint32_t  BE
 // Data    N DataSize Bytes
 //
-function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLast, callback) {
+function sendMessageFragment(sockets, messageId, packetPayload, offset, isLast, callback) {
     assert(packetPayload.length <= PACKET_MAX_PAYLOAD_SIZE);
 
     // Determine packet size
@@ -103,7 +103,7 @@ function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLa
     buffer.writeUInt16BE(flags, 0);
     buffer.writeUInt16BE(packetPayload.length, 2);
     buffer.writeUInt32BE(offset, 4);
-    buffer.writeUInt32BE(transactionId, 8);
+    buffer.writeUInt32BE(messageId, 8);
 
     // Append the payload
     packetPayload.copy(buffer, PACKET_HEADER_SIZE);
@@ -114,7 +114,7 @@ function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLa
 
 // Emit buffer payload randomly via UDP socket
 //
-function sendMessage(sockets, transactionId, payload, messageFragments, callback) {
+function sendMessage(sockets, messageId, payload, messageFragments, callback) {
     var count = 0;
     var messageFragmentsList = messageFragments.list;
     var lastMessageFragmentOffset = messageFragments.lastMessageFragmentOffset;
@@ -125,7 +125,7 @@ function sendMessage(sockets, transactionId, payload, messageFragments, callback
         var packetPayload = payload.slice(offset, length);
 
         var isLast = (offset === lastMessageFragmentOffset);
-        sendMessageFragment(sockets, transactionId, packetPayload, offset, isLast, function (err) {
+        sendMessageFragment(sockets, messageId, packetPayload, offset, isLast, function (err) {
             if (err) {
                 console.log("Error emitting: " + err);
                 callback(err);
@@ -144,15 +144,15 @@ function sendMessage(sockets, transactionId, payload, messageFragments, callback
 
 // Emit one payload from [1,MESSAGE_MAX_PAYLOAD_SIZE] randomly
 //
-function generateAndSendMessage(sockets, transactionId, callback) {
+function generateAndSendMessage(sockets, messageId, callback) {
     // create random data payload between 1 byte and MESSAGE_MAX_PAYLOAD_SIZE inclusive
     var payloadSize = Math.floor((Math.random() * MESSAGE_MAX_PAYLOAD_SIZE) + 1);
     var payload = crypto.randomBytes(payloadSize);
     var hash = crypto.createHash("sha256").update(payload);
     var messageFragments = fragmentMessage(payload.length, PACKET_MAX_PAYLOAD_SIZE);
 
-    sendMessage(sockets, transactionId, payload, messageFragments, function (err, count) {
-        console.log("Emitted message #" + transactionId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
+    sendMessage(sockets, messageId, payload, messageFragments, function (err, count) {
+        console.log("Emitted message #" + messageId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
         callback(err);
     });
 }
@@ -162,7 +162,7 @@ function generateAndSendMessage(sockets, transactionId, callback) {
 function main() {
     var socket;
     var sockets = [];
-    var transactionId = 0;
+    var messageId = 0;
     var count = 1000;
     var i;
 
@@ -184,8 +184,8 @@ function main() {
     }
 
     function sendRemainingMessages() {
-        transactionId += 1;
-        generateAndSendMessage(sockets, transactionId, function (err) {
+        messageId += 1;
+        generateAndSendMessage(sockets, messageId, function (err) {
             if (err) {
                 console.log("Fail: " + err);
                 throw err;
