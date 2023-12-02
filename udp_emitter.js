@@ -120,7 +120,7 @@ function sendMessage(sockets, transactionId, payload, randomObject, callback) {
     var sequence = randomObject.sequence;
     var maxOffset = randomObject.maxOffset;
 
-    function sendOne() {
+    function sendRemainingPackets() {
         var node = sequence[count];
         const [offset, length] = node
         var packetPayload = payload.slice(offset, length);
@@ -136,12 +136,11 @@ function sendMessage(sockets, transactionId, payload, randomObject, callback) {
             if (count >= sequence.length) {
                 callback(null, count);
             } else {
-                sendOne();
+                sendRemainingPackets();
             }
         });
     }
-
-    sendOne();
+    sendRemainingPackets();
 }
 
 // Emit one payload from [1,MESSAGE_MAX_PAYLOAD_SIZE] randomly
