@@ -92,7 +92,7 @@ function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLa
     var packetSize = PACKET_HEADER_SIZE + packetPayload.length;
 
     // Create packet buffer
-    var packetBuffer = Buffer.alloc(packetSize);
+    var buffer = Buffer.alloc(packetSize);
 
     // Write the header
     var flags = 0;
@@ -100,16 +100,16 @@ function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLa
         flags = 0x8000;
     }
 
-    packetBuffer.writeUInt16BE(flags, 0);
-    packetBuffer.writeUInt16BE(packetPayload.length, 2);
-    packetBuffer.writeUInt32BE(offset, 4);
-    packetBuffer.writeUInt32BE(transactionId, 8);
+    buffer.writeUInt16BE(flags, 0);
+    buffer.writeUInt16BE(packetPayload.length, 2);
+    buffer.writeUInt32BE(offset, 4);
+    buffer.writeUInt32BE(transactionId, 8);
 
     // Append the payload
-    packetPayload.copy(packetBuffer, PACKET_HEADER_SIZE);
+    packetPayload.copy(buffer, PACKET_HEADER_SIZE);
 
     // Put the data on the wire, random socket.
-    sockets.any().send(packetBuffer, 0, packetBuffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
+    sockets.any().send(buffer, 0, buffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
 }
 
 // Emit buffer payload randomly via UDP socket
