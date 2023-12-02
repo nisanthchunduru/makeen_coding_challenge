@@ -31,7 +31,7 @@ function generateRandomSequence(top, max) {
     var newNode;
     var offset;
     var newOffset;
-    var maxOffset = 0;
+    var lastMessageFragmentOffset = 0;
     var outputSequence = [];
 
     while (ranges.length > 0) {
@@ -56,8 +56,8 @@ function generateRandomSequence(top, max) {
         // emit the node
         outputSequence.push(newNode);
 
-        if (newNode[0] > maxOffset) {
-            maxOffset = newNode[0];
+        if (newNode[0] > lastMessageFragmentOffset) {
+            lastMessageFragmentOffset = newNode[0];
         }
 
         // split or remove old node
@@ -73,7 +73,7 @@ function generateRandomSequence(top, max) {
 
     return {
         "sequence": outputSequence,
-        "maxOffset": maxOffset
+        "lastMessageFragmentOffset": lastMessageFragmentOffset
     };
 }
 
@@ -114,17 +114,17 @@ function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLa
 
 // Emit buffer payload randomly via UDP socket
 //
-function sendMessage(sockets, transactionId, payload, randomObject, callback) {
+function sendMessage(sockets, transactionId, payload, messageFragments, callback) {
     var count = 0;
-    var sequence = randomObject.sequence;
-    var maxOffset = randomObject.maxOffset;
+    var messageFragmentsList = messageFragments.list;
+    var lastMessageFragmentOffset = messageFragments.lastMessageFragmentOffset;
 
     function sendRemainingPackets() {
-        var node = sequence[count];
+        var node = messageFragmentsList[count];
         const [offset, length] = node
         var packetPayload = payload.slice(offset, length);
 
-        var isLast = (offset === maxOffset);
+        var isLast = (offset === lastMessageFragmentOffset);
         sendMessageFragment(sockets, transactionId, packetPayload, offset, isLast, function (err) {
             if (err) {
                 console.log("Error emitting: " + err);
@@ -132,7 +132,7 @@ function sendMessage(sockets, transactionId, payload, randomObject, callback) {
             }
 
             count += 1;
-            if (count >= sequence.length) {
+            if (count >= messageFragmentsList.length) {
                 callback(null, count);
             } else {
                 sendRemainingPackets();
@@ -149,9 +149,9 @@ function generateAndSendMessage(sockets, transactionId, callback) {
     var payloadSize = Math.floor((Math.random() * MESSAGE_MAX_PAYLOAD_SIZE) + 1);
     var payload = crypto.randomBytes(payloadSize);
     var hash = crypto.createHash("sha256").update(payload);
-    var randomObject = generateRandomSequence(payload.length, PACKET_MAX_PAYLOAD_SIZE);
+    var messageFragments = generateRandomSequence(payload.length, PACKET_MAX_PAYLOAD_SIZE);
 
-    sendMessage(sockets, transactionId, payload, randomObject, function (err, count) {
+    sendMessage(sockets, transactionId, payload, messageFragments, function (err, count) {
         console.log("Emitted message #" + transactionId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
         callback(err);
     });
