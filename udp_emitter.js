@@ -24,7 +24,7 @@ Array.prototype.any = function () {
 // input 10, 3
 // output: [(3,1), (0,3), (7,2), (9,1), (4, 3)]
 //
-function generateRandomSequence(top, max) {
+function fragmentMessage(top, max) {
     // generate a list of ranges, decompose iteratively
     var ranges = [[0, top]];
     var node;
@@ -149,7 +149,7 @@ function generateAndSendMessage(sockets, transactionId, callback) {
     var payloadSize = Math.floor((Math.random() * MESSAGE_MAX_PAYLOAD_SIZE) + 1);
     var payload = crypto.randomBytes(payloadSize);
     var hash = crypto.createHash("sha256").update(payload);
-    var messageFragments = generateRandomSequence(payload.length, PACKET_MAX_PAYLOAD_SIZE);
+    var messageFragments = fragmentMessage(payload.length, PACKET_MAX_PAYLOAD_SIZE);
 
     sendMessage(sockets, transactionId, payload, messageFragments, function (err, count) {
         console.log("Emitted message #" + transactionId + " of size:" + payloadSize + " packets:" + count + " sha256:" + hash.digest("hex"));
