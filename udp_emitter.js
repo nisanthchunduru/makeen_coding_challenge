@@ -15,7 +15,7 @@ var PACKET_MAX_SIZE = 512;
 var PACKET_HEADER_SIZE = 12;
 var PACKET_MAX_PAYLOAD_SIZE = (PACKET_MAX_SIZE - PACKET_HEADER_SIZE);
 
-Array.prototype.getRandomElement = function () {
+Array.prototype.any = function () {
     return this[Math.floor(Math.random() * this.length)];
 }
 
@@ -109,8 +109,7 @@ function sendMessageFragment(sockets, transactionId, packetPayload, offset, isLa
     packetPayload.copy(packetBuffer, PACKET_HEADER_SIZE);
 
     // Put the data on the wire, random socket.
-    randomSocket = sockets.getRandomElement()
-    randomSocket.send(packetBuffer, 0, packetBuffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
+    sockets.any().send(packetBuffer, 0, packetBuffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
 }
 
 // Emit buffer payload randomly via UDP socket
