@@ -1,0 +1,7 @@
+{
+  "name": "message-fragmentation-reassembly-demo",
+  "version": "0.0.1",
+  "dependencies": {
+    "getlorem": "^1.0.1"
+  }
+}
