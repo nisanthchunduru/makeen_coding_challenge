@@ -1,9 +1,85 @@
 const dgram = require('dgram');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
+const { Sequelize, DataTypes } = require('sequelize')
 
 const PORT = 6789;
 const ADDRESS = '127.0.0.1';
 const CONCURRENCY = 4
+
+const sequelize = new Sequelize({
+  dialect: 'postgres',
+  username: 'postgres',
+  database: 'receiver_development',
+  returning: true
+});
+
+const Message = sequelize.define('Message', {
+  // id: {
+  //   allowNull: false,
+  //   autoIncrement: true,
+  //   primaryKey: true,
+  //   type: Sequelize.INTEGER,
+  // },
+  senderDesignatedId: {
+    allowNull: false,
+    type: Sequelize.BIGINT.UNSIGNED,
+    unique: true
+  },
+  // createdAt: {
+  //   allowNull: false,
+  //   type: Sequelize.DATE,
+  // },
+  // updatedAt: {
+  //   allowNull: false,
+  //   type: Sequelize.DATE,
+  // },
+});
+
+const MessageFragment = sequelize.define('MessageFragment', {
+  // id: {
+  //   allowNull: false,
+  //   autoIncrement: true,
+  //   primaryKey: true,
+  //   type: Sequelize.INTEGER,
+  // },
+  offset: {
+    allowNull: false,
+    type: Sequelize.INTEGER,
+  },
+  textSize: {
+    allowNull: false,
+    type: Sequelize.INTEGER,
+  },
+  text: {
+    allowNull: false,
+    type: Sequelize.TEXT,
+  },
+  isLast: {
+    allowNull: false,
+    type: Sequelize.BOOLEAN,
+  },
+  // messageId: {
+  //   allowNull: false,
+  //   type: Sequelize.INTEGER,
+  //   references: {
+  //     model: 'Messages',
+  //     key: 'id',
+  //   }
+  // },
+  // createdAt: {
+  //   allowNull: false,
+  //   type: Sequelize.DATE,
+  // },
+  // updatedAt: {
+  //   allowNull: false,
+  //   type: Sequelize.DATE,
+  // }
+});
+
+sequelize.sync();
+
+Message.hasMany(MessageFragment);
+MessageFragment.belongsTo(Message);
 
 messagesFragments = {}
 
@@ -54,19 +130,36 @@ function printMessage(messageId) {
   console.log(message + "\n")
 }
 
-function processUdpMessage(udpMessage) {
+async function processUdpMessage(udpMessage) {
   const flags = udpMessage.readUInt16BE(0)
   const messageFragmentTextSize = udpMessage.readUInt16BE(2)
   const messageFragmentOffset = udpMessage.readUInt32BE(4)
   const messageId = udpMessage.readUInt32BE(8)
   const messageFragmentText = udpMessage.toString('utf8', 12, 12 + messageFragmentTextSize);
-  messageFragment = {
+  const messageFragment = {
     flags: flags,
     offset: messageFragmentOffset,
     messageId: messageId,
     size: messageFragmentTextSize,
     text: messageFragmentText.toString()
   }
+
+  const messageAttributes = {
+    senderDesignatedId: messageId
+  }
+  const [message, created] = await Message.findOrCreate({ where: messageAttributes })
+
+  console.log(message)
+  console.log(message.id)
+
+  const messageFragmentAttributes = {
+    offset: messageFragmentOffset,
+    textSize: messageFragmentTextSize,
+    text: messageFragmentText,
+    isLast: (flags == 0x8000),
+    MessageId: message.id
+  }
+  const _messageFragment = await MessageFragment.create(messageFragmentAttributes)
 
   if (!messagesFragments[messageId]) {
     messagesFragments[messageId] = []
