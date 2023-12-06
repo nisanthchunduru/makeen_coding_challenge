@@ -3,6 +3,7 @@ const { Worker, isMainThread, parentPort, workerData } = require('worker_threads
 
 const PORT = 6789;
 const ADDRESS = '127.0.0.1';
+const CONCURRENCY = 4
 
 messagesFragments = {}
 
@@ -81,11 +82,16 @@ function processUdpMessage(udpMessage) {
 if (isMainThread) {
   const socket = dgram.createSocket('udp4');
 
-  worker = new Worker(__filename);
+  workers = []
+  for(i = 0; i < CONCURRENCY; i++) {
+    workers.push(new Worker(__filename))
+  }
 
   socket.on('message', (udpMessage, metadata) => {
-    // worker.postMessage({ udpMessage });
-    processUdpMessage(udpMessage)
+    const messageId = udpMessage.readUInt32BE(8);
+    workerNumber = messageId % 4
+    worker = workers[workerNumber]
+    worker.postMessage({ udpMessage });
   });
 
   socket.bind({
