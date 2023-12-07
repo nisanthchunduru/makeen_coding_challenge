@@ -1,6 +1,7 @@
 const dgram = require('dgram');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const { Sequelize, DataTypes } = require('sequelize')
+const crypto = require('crypto')
 
 const PORT = 6789;
 const ADDRESS = '127.0.0.1';
@@ -10,7 +11,8 @@ const sequelize = new Sequelize({
   dialect: 'postgres',
   username: 'postgres',
   database: 'receiver_development',
-  returning: true
+  returning: true,
+  logging: false
 });
 
 const Message = sequelize.define('Message', {
@@ -22,7 +24,7 @@ const Message = sequelize.define('Message', {
   // },
   senderDesignatedId: {
     allowNull: false,
-    type: Sequelize.BIGINT.UNSIGNED,
+    type: Sequelize.BIGINT,
     unique: true
   },
   // createdAt: {
@@ -120,14 +122,15 @@ function allMessageFragmentsReceived(messageId) {
   return true
 }
 
-function printMessage(messageId) {
+function printMessageSummary(messageId) {
   messageFragments = messagesFragments[messageId]
   messageFragments = sortMessageFragments(messageFragments)
   message = ""
   messageFragments.forEach(function (messageFragment) {
     message = message + messageFragment.text
   })
-  console.log(message + "\n")
+  var hash = crypto.createHash("sha256").update(message);
+  console.log(`Message #${messageId} size:${message.length} sha256:${hash.digest("hex")}`)
 }
 
 async function processUdpMessage(udpMessage) {
@@ -149,9 +152,6 @@ async function processUdpMessage(udpMessage) {
   }
   const [message, created] = await Message.findOrCreate({ where: messageAttributes })
 
-  console.log(message)
-  console.log(message.id)
-
   const messageFragmentAttributes = {
     offset: messageFragmentOffset,
     textSize: messageFragmentTextSize,
@@ -166,7 +166,7 @@ async function processUdpMessage(udpMessage) {
   }
   messagesFragments[messageId].push(messageFragment)
   if (allMessageFragmentsReceived(messageId)) {
-    printMessage(messageId)
+    printMessageSummary(messageId)
   }
 
   return true
