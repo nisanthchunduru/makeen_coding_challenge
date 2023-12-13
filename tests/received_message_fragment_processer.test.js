@@ -4,6 +4,7 @@ require("../src/app")
 const sequelize = require('../src/sequelize');
 const Logger = require("../src/logger")
 const ReceivedMessageFragmentProcessor = require("../src/received_message_fragment_processor");
+const Message = require("../src/models/message");
 
 function createRawMessageFragment(messageId, text, options = {}) {
   const headerSize = 12 * 8 // 12 bytes * 8 bytes
@@ -59,8 +60,32 @@ describe("ReceivedMessageFragmentProcessor", () => {
       await process(messageFragment)
     })
 
-    describe("all fragments are received", () => {
-      test("prints a message summary to STDOUT", async () => {
+    describe("message fragment is a duplicate", () => {
+      test("ignores the message fragment", async () => {
+        const messageId = 1
+        const messageFragmentText = "Hello"
+        const messageFragment = createRawMessageFragment(messageId, messageFragmentText)
+        await process(messageFragment)
+        await process(messageFragment)
+      })
+    })
+
+    describe("all fragments of a message are received", () => {
+      test("marks the message as complete", async () => {
+        const messageId = 1
+        const messageFragment1 = createRawMessageFragment(messageId, "Hello")
+        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previousFragments: [messageFragment1], last: true })
+
+        await process(messageFragment1)
+        await process(messageFragment2)
+
+        const message = await Message.findOne({ where: { externalId: messageId } })
+        expect(message.complete).toEqual(true)
+
+        return true
+      })
+
+      test("prints a summary of the message to STDOUT", async () => {
         const messageId = 1
         const messageFragment1 = createRawMessageFragment(messageId, "Hello")
         const messageFragment2 = createRawMessageFragment(messageId, " world!", { previousFragments: [messageFragment1], last: true })
@@ -75,8 +100,8 @@ describe("ReceivedMessageFragmentProcessor", () => {
       })
     })
 
-    describe("all of a message's fragments have not been received", () => {
-      test("prints a message summary to STDOUT", async () => {
+    describe("all fragments of a message are not received", () => {
+      test("doesn't print a summary of the message to STDOUT", async () => {
         const messageId = 1
         const messageFragment1 = createRawMessageFragment(messageId, "Hello")
         const messageFragment2 = createRawMessageFragment(messageId, " world!", { previousFragments: [messageFragment1]})

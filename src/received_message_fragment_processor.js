@@ -21,7 +21,7 @@ class ReceivedMessageFragmentProcessor {
     }
 
     const messageAttributes = {
-      senderDesignatedId: messageId
+      externalId: messageId
     }
     const [message, created] = await Message.findOrCreate({ where: messageAttributes })
 
@@ -32,10 +32,19 @@ class ReceivedMessageFragmentProcessor {
       isLast: (flags == 0x8000),
       MessageId: message.id
     }
-    const _messageFragment = await MessageFragment.create(messageFragmentAttributes)
+    try {
+      const _messageFragment = await MessageFragment.create(messageFragmentAttributes)
+    } catch(e) {
+      if (e.message == 'Validation error') {
+        return true
+      } else {
+        throw e
+      }
+    }
 
     const allMessageFragmentsReceived = await message.allFragmentsReceived()
     if (allMessageFragmentsReceived) {
+      await message.update({ complete: true })
       await printMessageSummary(message)
     }
 
@@ -48,5 +57,5 @@ module.exports = ReceivedMessageFragmentProcessor
 async function printMessageSummary(message) {
   const messageText = await message.text()
   const hash = crypto.createHash("sha256").update(messageText);
-  Logger.log(`Message #${message.senderDesignatedId} size:${messageText.length} sha256:${hash.digest("hex")}`)
+  Logger.log(`Message #${message.externalId} size:${messageText.length} sha256:${hash.digest("hex")}`)
 }

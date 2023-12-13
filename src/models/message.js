@@ -8,19 +8,24 @@ const Message = sequelize.define('Message', {
   //   primaryKey: true,
   //   type: Sequelize.INTEGER,
   // },
-  senderDesignatedId: {
+  externalId: {
     allowNull: false,
     type: Sequelize.BIGINT,
     unique: true
   },
-  // createdAt: {
-  //   allowNull: false,
-  //   type: Sequelize.DATE,
-  // },
-  // updatedAt: {
-  //   allowNull: false,
-  //   type: Sequelize.DATE,
-  // },
+  complete: {
+    allowNull: false,
+    type: Sequelize.BOOLEAN,
+    defaultValue: false
+  },
+  createdAt: {
+    allowNull: false,
+    type: Sequelize.DATE,
+  },
+  updatedAt: {
+    allowNull: false,
+    type: Sequelize.DATE,
+  },
 });
 
 Message.prototype.allFragmentsReceived = async function () {

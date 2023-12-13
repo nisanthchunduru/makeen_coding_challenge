@@ -9,6 +9,7 @@
     "sequelize-cli": "^6.6.2"
   },
   "scripts": {
-    "db:create": "sequelize db:create --url postgres://postgres@localhost:5432/receiver_development"
+    "db:create": "sequelize db:create --url postgres://postgres@localhost:5432/receiver_development",
+    "db:drop": "docker compose exec postgres psql -U postgres -c 'DROP DATABASE receiver_development'"
   }
 }
