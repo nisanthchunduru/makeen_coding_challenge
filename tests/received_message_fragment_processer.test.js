@@ -1,38 +1,12 @@
 const { Buffer } = require('node:buffer');
 
 require("../src/app")
+
 const sequelize = require('../src/sequelize');
 const Logger = require("../src/logger")
 const ReceivedMessageFragmentProcessor = require("../src/received_message_fragment_processor");
 const Message = require("../src/models/message");
-
-function createRawMessageFragment(messageId, text, options = {}) {
-  const headerSize = 12 * 8 // 12 bytes * 8 bytes
-  const size = headerSize + text.length
-  const rawMessageFragment = Buffer.alloc(size)
-  let flags;
-  if (options.last) {
-    flags = 0x8000
-  } else {
-    flags = 0
-  }
-  let offset;
-  if (options.previousFragments) {
-    offset = options.previousFragments.reduce((offset, previousFragment) => {
-      const previousFragmentTextSize = previousFragment.length - headerSize
-      return offset + previousFragmentTextSize
-    }, 0)
-  } else {
-    offset = 0
-  }
-  rawMessageFragment.writeUInt16BE(flags, 0)
-  rawMessageFragment.writeUInt16BE(text.length, 2)
-  rawMessageFragment.writeUInt32BE(offset, 4)
-  rawMessageFragment.writeUInt32BE(messageId, 8)
-  rawMessageFragment.write(text, 12)
-
-  return rawMessageFragment
-}
+const { createRawMessageFragment } = require("./helpers")
 
 function process(messageFragment) {
   return ReceivedMessageFragmentProcessor.process(messageFragment)
@@ -74,7 +48,7 @@ describe("ReceivedMessageFragmentProcessor", () => {
       test("marks the message as complete", async () => {
         const messageId = 1
         const messageFragment1 = createRawMessageFragment(messageId, "Hello")
-        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previousFragments: [messageFragment1], last: true })
+        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previous: messageFragment1, last: true })
 
         await process(messageFragment1)
         await process(messageFragment2)
@@ -88,7 +62,7 @@ describe("ReceivedMessageFragmentProcessor", () => {
       test("prints a summary of the message to STDOUT", async () => {
         const messageId = 1
         const messageFragment1 = createRawMessageFragment(messageId, "Hello")
-        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previousFragments: [messageFragment1], last: true })
+        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previous: messageFragment1, last: true })
 
         await process(messageFragment1)
         await process(messageFragment2)
@@ -104,7 +78,7 @@ describe("ReceivedMessageFragmentProcessor", () => {
       test("doesn't print a summary of the message to STDOUT", async () => {
         const messageId = 1
         const messageFragment1 = createRawMessageFragment(messageId, "Hello")
-        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previousFragments: [messageFragment1]})
+        const messageFragment2 = createRawMessageFragment(messageId, " world!", { previous: messageFragment1 })
 
         await process(messageFragment1)
         await process(messageFragment2)

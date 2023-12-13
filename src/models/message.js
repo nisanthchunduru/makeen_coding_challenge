@@ -67,6 +67,22 @@ Message.prototype.text = async function () {
   return text
 }
 
+Message.prototype.holes = async function () {
+  let fragments = await this.getMessageFragments();
+  fragments = sortFragmentsByOffset(fragments)
+  let expectedFragmentOffset = 0
+  const holes = []
+  for (i = 0; i < fragments.length; i++) {
+    const fragment = fragments[i]
+    if (fragment.offset != expectedFragmentOffset) {
+      holes.push(expectedFragmentOffset)
+    }
+    const nextFragmentOffset = fragment.offset + fragment.text.length
+    expectedFragmentOffset = nextFragmentOffset
+  }
+  return holes
+}
+
 module.exports = Message
 
 function sortFragmentsByOffset(messageFragments) {
