@@ -11,8 +11,7 @@ var assert = require("assert");
 var DESTINATION_PORT = 6789;
 var DESTINATION_HOST = "127.0.0.1";
 var SOCKET_POOL_SIZE = 16;
-// var MESSAGE_MAX_SIZE = (1024 * 1024);
-var MESSAGE_MAX_SIZE = 2048;
+var MESSAGE_MAX_SIZE = (1024 * 1024);
 var MESSAGE_FRAGMENT_PACKET_MAX_SIZE = 512;
 var MESSAGE_FRAGMENT_PACKET_HEADER_SIZE = 12;
 var MESSAGE_FRAGMENT_MAX_SIZE = (MESSAGE_FRAGMENT_PACKET_MAX_SIZE - MESSAGE_FRAGMENT_PACKET_HEADER_SIZE);
@@ -87,11 +86,11 @@ function fragmentMessage(top, max) {
 // TransactionID uint32_t  BE
 // Data    N DataSize Bytes
 //
-function sendMessageFragment(sockets, messageId, packetPayload, offset, isLast, callback) {
-    assert(packetPayload.length <= MESSAGE_FRAGMENT_MAX_SIZE);
+function sendMessageFragment(sockets, messageId, fragmentText, offset, isLast, callback) {
+    assert(fragmentText.length <= MESSAGE_FRAGMENT_MAX_SIZE);
 
     // Determine packet size
-    var packetSize = MESSAGE_FRAGMENT_PACKET_HEADER_SIZE + packetPayload.length;
+    var packetSize = MESSAGE_FRAGMENT_PACKET_HEADER_SIZE + fragmentText.length;
 
     // Create packet buffer
     var buffer = Buffer.alloc(packetSize);
@@ -103,13 +102,13 @@ function sendMessageFragment(sockets, messageId, packetPayload, offset, isLast, 
     }
 
     buffer.writeUInt16BE(flags, 0);
-    buffer.writeUInt16BE(packetPayload.length, 2);
+    buffer.writeUInt16BE(fragmentText.length, 2);
     buffer.writeUInt32BE(offset, 4);
     buffer.writeUInt32BE(messageId, 8);
 
     // Append the payload
-    // packetPayload.copy(buffer, MESSAGE_FRAGMENT_PACKET_HEADER_SIZE);
-    buffer.write(packetPayload, 12)
+    // fragmentText.copy(buffer, MESSAGE_FRAGMENT_PACKET_HEADER_SIZE);
+    buffer.write(fragmentText, 12)
 
     // Put the data on the wire, random socket.
     sockets.any().send(buffer, 0, buffer.length, DESTINATION_PORT, DESTINATION_HOST, callback);
@@ -172,7 +171,8 @@ function generateRandomUInt32() {
 function main() {
     var socket;
     var sockets = [];
-    var messageId = 0;
+    // var messageId = 0;
+    let messageId;
     // var count = 1000;
     var count = 1
     var i;

@@ -2,7 +2,7 @@ const Logger = require("./logger")
 
 class MessageHolesPrinter {
   static async print(message) {
-    const messageHoles = await message.holes()
+    const messageHoles = await message.getHoles()
     messageHoles.forEach(function (hole) {
       const log = `Message #${message.externalId} Hole at: ${hole}`
       Logger.log(log)

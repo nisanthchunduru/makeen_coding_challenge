@@ -1,12 +1,11 @@
 const dgram = require('dgram');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 
-require("./app")
-const sequelize = require("./sequelize")
+require("./src/app")
+const sequelize = require("./src/sequelize")
 // await sequelize.sync()
 sequelize.sync()
-const ReceivedMessageFragmentProcessor = require("./src/received_udp_message_processor");
-const sequelize = require('./src/sequelize');
+const ReceivedMessageFragmentProcessor = require("./src/received_message_fragment_processor");
 
 const PORT = 6789;
 const ADDRESS = '127.0.0.1';
@@ -15,17 +14,17 @@ const CONCURRENCY = 4
 if (isMainThread) {
   const socket = dgram.createSocket('udp4');
 
-  workers = []
+  messageFragmentProcessorThreads = []
   for(i = 0; i < CONCURRENCY; i++) {
-    workers.push(new Worker(__filename))
+    messageFragmentProcessorThreads.push(new Worker(__filename))
   }
 
   socket.on('message', (udpMessage, metadata) => {
     const messageFragment = udpMessage
     const messageId = messageFragment.readUInt32BE(8);
-    workerNumber = messageId % 4
-    worker = workers[workerNumber]
-    worker.postMessage({ messageFragment });
+    messageFragmentProcessNumber = messageId % 4
+    messageFragmentProcessor = messageFragmentProcessorThreads[messageFragmentProcessNumber]
+    messageFragmentProcessor.postMessage({ messageFragment });
   });
 
   socket.bind({
@@ -35,6 +34,6 @@ if (isMainThread) {
   });
 } else {
   parentPort.on('message', ({ messageFragment }) => {
-    ReceivedMessageFragmentProcessor.receiver(Buffer.from(messageFragment))
+    ReceivedMessageFragmentProcessor.process(Buffer.from(messageFragment))
   });
 }

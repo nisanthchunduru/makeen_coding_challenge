@@ -44,20 +44,11 @@ Message.prototype.allFragmentsReceived = async function () {
   if (fragments.length == 1) {
     return false
   }
-
-  // Determine if all fragments have been received
-  for (i = 1; i < fragments.length; i++) {
-    const previousFragment = fragments[i - 1]
-    const fragment = fragments[i]
-
-    if (fragment.offset != (previousFragment.offset + previousFragment.textSize)) {
-      return false
-    }
-  }
-  return true
+  const holes = await this.getHoles()
+  return (holes.length == 0)
 }
 
-Message.prototype.text = async function () {
+Message.prototype.getText = async function () {
   let fragments = await this.getMessageFragments();
   fragments = sortFragmentsByOffset(fragments)
   let text = ""
@@ -67,7 +58,7 @@ Message.prototype.text = async function () {
   return text
 }
 
-Message.prototype.holes = async function () {
+Message.prototype.getHoles = async function () {
   let fragments = await this.getMessageFragments();
   fragments = sortFragmentsByOffset(fragments)
   let expectedFragmentOffset = 0
