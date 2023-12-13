@@ -23,41 +23,47 @@ const Message = sequelize.define('Message', {
   // },
 });
 
-Message.prototype.allFragmentsReceived = function () {
-  messageFragments = messagesFragments[messageId]
-  messageFragments = sortMessageFragments(messageFragments)
+Message.prototype.allFragmentsReceived = async function () {
+  let fragments = await this.getMessageFragments();
+  fragments = sortFragmentsByOffset(fragments)
 
-  messageFragmentPositions = messageFragments.map(function (messageFragment) {
-    return [messageFragment.offset, messageFragment.size, messageFragment.flags]
-  })
-
-  // If this first message fragment is yet to be received, return false
-  if (messageFragments[0].offset != 0) {
+  // If this first fragment is not yet received, return false
+  if (fragments[0].offset != 0) {
     return false
   }
-  // If this last message fragment is yet to be received, return false
-  if (messageFragments[messageFragments.length - 1].flags != 0x8000) {
+  // If this last fragment not yet received, return false
+  if (!fragments[fragments.length - 1].isLast) {
     return false
   }
-  // If only one message fragment and its not the last fragment, return false
-  if (messageFragments.length == 1) {
+  // If only one fragment has been received and its not the last fragment, return false
+  if (fragments.length == 1) {
     return false
   }
 
-  // Determine if all message fragments have been received
-  for (i = 1; i < messageFragments.length; i++) {
-    const previousMessageFragment = messageFragments[i - 1]
-    const messageFragment = messageFragments[i]
+  // Determine if all fragments have been received
+  for (i = 1; i < fragments.length; i++) {
+    const previousFragment = fragments[i - 1]
+    const fragment = fragments[i]
 
-    if (messageFragment.offset != (previousMessageFragment.offset + previousMessageFragment.size)) {
+    if (fragment.offset != (previousFragment.offset + previousFragment.textSize)) {
       return false
     }
   }
   return true
 }
 
+Message.prototype.text = async function () {
+  let fragments = await this.getMessageFragments();
+  fragments = sortFragmentsByOffset(fragments)
+  let text = ""
+  fragments.forEach(function (fragment) {
+    text = text + fragment.text
+  })
+  return text
+}
+
 module.exports = Message
 
-function sortMessageFragments(messageFragments) {
+function sortFragmentsByOffset(messageFragments) {
   return messageFragments.sort((messageFragment1, messageFragment2) => messageFragment1.offset - messageFragment2.offset)
 }

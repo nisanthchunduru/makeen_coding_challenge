@@ -1,9 +1,9 @@
 const { Buffer } = require('node:buffer');
 
+require("../src/app")
+const sequelize = require('../src/sequelize');
 const Logger = require("../src/logger")
-
-const ReceivedMessageFragmentProcessor = require("../src/received_message_fragment_processor")
-const sequelize = require("../src/sequelize")
+const ReceivedMessageFragmentProcessor = require("../src/received_message_fragment_processor");
 
 function createRawMessageFragment(messageId, text, options = {}) {
   const headerSize = 12 * 8 // 12 bytes * 8 bytes
@@ -40,8 +40,11 @@ function process(messageFragment) {
 describe("ReceivedMessageFragmentProcessor", () => {
   describe(".process()", () => {
     beforeAll(async function () {
-      await sequelize.sync()
-      await sequelize.truncate()
+      await sequelize.sync();
+    });
+
+    beforeEach(async function () {
+      await sequelize.truncate({ cascade: true })
       Logger.clear()
     });
 
@@ -56,7 +59,7 @@ describe("ReceivedMessageFragmentProcessor", () => {
       await process(messageFragment)
     })
 
-    describe("all of a message's fragments are received", () => {
+    describe("all fragments are received", () => {
       test("prints a message summary to STDOUT", async () => {
         const messageId = 1
         const messageFragment1 = createRawMessageFragment(messageId, "Hello")

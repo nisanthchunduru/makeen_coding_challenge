@@ -1,20 +1,16 @@
 const dgram = require('dgram');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
-const sequelize = require("./src/sequelize")
 
-const ReceivedMessageFragmentProcessor = require("./src/received_udp_message_processor")
+require("./app")
+const sequelize = require("./sequelize")
+// await sequelize.sync()
+sequelize.sync()
+const ReceivedMessageFragmentProcessor = require("./src/received_udp_message_processor");
+const sequelize = require('./src/sequelize');
 
 const PORT = 6789;
 const ADDRESS = '127.0.0.1';
 const CONCURRENCY = 4
-
-const Message = require("./models/message")
-const MessageFragment = require("./models/message_fragment")
-
-Message.hasMany(MessageFragment);
-MessageFragment.belongsTo(Message);
-
-sequelize.sync();
 
 if (isMainThread) {
   const socket = dgram.createSocket('udp4');
